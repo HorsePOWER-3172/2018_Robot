@@ -41,12 +41,23 @@ class Robot(wpilib.IterativeRobot):
         self.game_pad = wpilib.Joystick(GAMEPAD_NUM)
 
     def stop(self):
+        """Stops all motors which are currently moving"""
         if self.left_motor.get() != 0:
             self.left_motor.set(0)
         if self.right_motor.get() != 0:
             self.right_motor.set(0)
+        if self.robot_lift.get() != 0:
+            self.robot_lift.set(0)
+        if self.robot_arm.get() != 0:
+            self.robot_arm.set(0)
 
     # Events
+    def robotInit(self):
+        pass
+
+    def robotPeriodic(self):
+        pass
+
     def disabledInit(self):
         self.stop()
 

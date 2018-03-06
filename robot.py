@@ -15,7 +15,7 @@ DEADZONES = {LEFT_AXIS: DEFAULT_DEADZONE, RIGHT_AXIS: DEFAULT_DEADZONE,
 
 # Initiate reverse values
 DEFAULT_REVERSE = False
-REVERSES = {LEFT_AXIS: DEFAULT_REVERSE, RIGHT_AXIS: DEFAULT_REVERSE,
+REVERSES = {LEFT_AXIS: not DEFAULT_REVERSE, RIGHT_AXIS: DEFAULT_REVERSE,
             LIFT_AXIS: DEFAULT_REVERSE, ARM_AXIS: DEFAULT_REVERSE}
 
 # Initiate Speed caps
@@ -29,9 +29,6 @@ LEFT_PORT = 0
 RIGHT_PORT = 1
 LIFT_PORT = 5
 ARM_PORT = 3
-
-LIFT_TOP_SWITCH_PORT = 0
-ARM_LEFT_RIGHT_SWITCH_PORT = 1
 
 GAMEPAD_NUM = 0  # This should prolly always be zero
 
@@ -52,11 +49,6 @@ class Robot(wpilib.IterativeRobot):
         self.robot_lift = wpilib.PWMTalonSRX(LIFT_PORT)
         self.robot_arm = wpilib.PWMTalonSRX(ARM_PORT)
 
-        # Initiate limit switches
-        self.lift_top = wpilib.DigitalInput(LIFT_TOP_SWITCH_PORT)
-        self.arm_left_right = wpilib.DigitalInput(ARM_LEFT_RIGHT_SWITCH_PORT)
-
-        self.limits = set()
         self.buttons = set()
 
         # Initiate gamepad
@@ -96,47 +88,21 @@ class Robot(wpilib.IterativeRobot):
 
     def autonomousInit(self):
         self.limits = set()
-        print("AUTO INIT")
 
     def autonomousPeriodic(self):
         pass
 
     def teleopInit(self):
         self.limits = set()
-        print("TELE INIT")
 
     def teleopPeriodic(self):
 
-        # print(self.lift_top.get(), self.arm_left_right.get())
-
         axes = self.get_axes()
-
-        print(axes)
-
-        # Check limit switches
-        # if self.lift_top.get():
-        #     # Hit top of lift
-        #     self.limits.add("TOP")
-        # if self.arm_left_right.get():
-        #     # Hit top of lift
-        #     self.limits.add("ARM")
 
         self.left_motor.set(axes[LEFT_AXIS])
         self.right_motor.set(axes[RIGHT_AXIS])
 
-        # Check lift axis position
-        lift_value = axes[LIFT_PORT]
-        # if lift_value < 0 and "TOP" in self.limits:
-            # If the top limit switch is triggered and the lift was lowered,
-            # untrigger limit switch
-            # self.limits.remove("TOP")
-        # if not (lift_value > 0 and "TOP" in self.limits):
-        #     pass
-            # Only move lift if not going up and at top
         self.robot_lift.set(axes[LIFT_AXIS])
-            # print("Moving, not at top or not moving up")
-        # print("LIFT", self.robot_lift.get(), "STICK", axes[LIFT_AXIS])
-
         self.robot_arm.set(axes[ARM_AXIS])
 
     def get_raw_axes(self):
@@ -172,8 +138,6 @@ class Robot(wpilib.IterativeRobot):
                 if REVERSES[axis]:
                     value *= -1
                 axes[axis] = value
-        # if LIFT_PORT in axes:
-        #     print("SCALED TRIGGER", axes[LIFT_PORT])
         return axes
 
 

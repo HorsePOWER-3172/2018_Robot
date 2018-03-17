@@ -62,8 +62,13 @@ RUMBLE_LENGTH = 100
 
 AUTO_SPEED = .8
 AUTO_ACCEL = .5
-AUTO_DUR = 8000
+AUTO_DUR = 4000
 ACCEL = 4
+
+ANGLE_MARGIN = .5
+ANGLE_CHANGE = .1
+
+GYRO_ENABLE = True
 
 
 def get_millis():
@@ -110,6 +115,9 @@ class Robot(wpilib.IterativeRobot):
         self.current_speed = [0, 0]
         self.last_tank = 0
 
+        self.gyro = wpilib.ADXRS450_Gyro(0)  # TODO: Figure out channel
+        self.tank_dir = None
+
     def reset_buttons(self):
         """Resets the values of the button toggles to default likewise
         defined here
@@ -146,12 +154,39 @@ class Robot(wpilib.IterativeRobot):
     def autonomousInit(self):
         self.stop()
         self.auto_start_time = None
+        self.gyro.calibrate()  # Takes five seconds
+        self.stop()  # Have to reset tank time to correct acceleration
 
     def tank(self, left, right, accel=None):
+        if left == right:
+            if isinstance(self.tank_dir, type(None)):
+                self.tank_dir = self.gyro.getAngle()
+        else:
+            self.tank_dir = None
+
+        turn = None
+        current_angle = None
+        if not isinstance(self.tank_dir, type(None)):
+            current_angle = self.gyro.getAngle()
+            if current_angle < self.tank_dir - ANGLE_MARGIN:
+                turn = "right"
+            elif current_angle > self.tank_dir + ANGLE_MARGIN:
+                turn = "left"
+
         if isinstance(accel, type(None)):
             accel = ACCEL
         speed1 = self.current_speed[0]
         speed2 = self.current_speed[1]
+        if not isinstance(turn, type(None)) and GYRO_ENABLE:
+            if turn == "left":
+                left -= ANGLE_CHANGE
+                right += ANGLE_CHANGE
+            elif turn == "right":
+                right -= ANGLE_CHANGE
+                left += ANGLE_CHANGE
+
+        print((round(self.tank_dir, 3) if not isinstance(self.tank_dir, type(None)) else None), (round(current_angle, 3) if not isinstance(current_angle, type(None)) else None), round(left, 3), round(right, 3), turn)
+
         if .4 > speed1 > 0:
             if left <= 0:
                 speed1 = 0
@@ -172,10 +207,11 @@ class Robot(wpilib.IterativeRobot):
                 speed2 = 0
             else:
                 speed2 = -.4
+
         if isinstance(accel, type(None)):
             self.drive.tankDrive(left, right)
             return None
-        vel_change = (get_millis() - self.last_tank) / 1000 * accel
+        vel_change = ((get_millis() - self.last_tank) / 1000) * accel
         if abs(speed1 - left) < WHEEL_LOCK:
             speed1 = left
         else:
@@ -193,6 +229,7 @@ class Robot(wpilib.IterativeRobot):
         self.current_speed = [speed1, speed2]
         # print([round(left, 2), round(right, 2)], [round(speed1, 2), round(speed2, 2)], round(vel_change, 4))
         self.drive.tankDrive(*self.current_speed)
+        # print([round(x, 2) for x in self.current_speed], round(vel_change, 2), accel)
         self.last_tank = get_millis()
 
     def autonomousPeriodic(self):
@@ -255,14 +292,15 @@ class Robot(wpilib.IterativeRobot):
                 if button_name in self.button_toggles:
                     # needs toggled
                     if button_name == "GRAB":
-                        print(button_name, port == POV,
-                              self.get_raw_buttons()[POV], angle)
+                        pass
+                        # print(button_name, port == POV,
+                        #       self.get_raw_buttons()[POV], angle)
                     if not (port == POV and not self.get_raw_buttons()[
                                                     POV] == angle):
                         new_state = not self.button_toggles[button_name]
                         self.button_toggles[button_name] = new_state
                         self.set_rumble(new_state)
-                        print(button_name, new_state)
+                        # print(button_name, new_state)
                 elif self.get_raw_buttons()[POV] == angle:
                     # Button angle correct, check button name
                     if button_name == "INC SPEED":
@@ -283,8 +321,9 @@ class Robot(wpilib.IterativeRobot):
                     arms = max(-1, min(ARM_SPEED_OUT, 1))
                     self.button_toggles["GRAB"] = False
         if arms == 0 and self.button_toggles["GRAB"]:
-            self.robot_arm.set(ARM_SPEED_IN)
-        self.robot_arm.set(arms)
+            self.robot_arm.set(-ARM_SPEED_IN)
+        else:
+            self.robot_arm.set(arms)
 
         self.check_rumble()
 
@@ -303,6 +342,7 @@ class Robot(wpilib.IterativeRobot):
                 self.robot_lift.set(-left_trigger)
         elif right_trigger > 0:
             self.robot_lift.set(right_trigger)
+            # print(right_trigger)
         else:
             self.robot_lift.set(0)
 
@@ -411,12 +451,12 @@ class Robot(wpilib.IterativeRobot):
         """
         raw_buttons = self.get_raw_buttons()
         for button in raw_buttons:
-            if button not in self.pressed_buttons and raw_buttons[
-                button] > 0:  # TODO: Fix up on DPAD
+            being_pressed = (not raw_buttons[button] is False) and raw_buttons[button] != -1
+            if button not in self.pressed_buttons and being_pressed:
                 # If button not already accounted for and being pressed
                 self.pressed_buttons[button] = True
             elif button in self.pressed_buttons:
-                if raw_buttons[button] > 0:
+                if being_pressed:
                     # Being pressed, already used
                     self.pressed_buttons[button] = False
                 else:
@@ -428,3 +468,8 @@ class Robot(wpilib.IterativeRobot):
 
 if __name__ == '__main__':
     wpilib.run(Robot)
+
+
+# TODO: Fix smart dashboard
+# TODO: Fix POV
+# TODO: Test Gyro

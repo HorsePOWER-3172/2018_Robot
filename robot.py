@@ -36,9 +36,9 @@ CAP_HOLD_TIME = 500  # Amount of time to hold bumpers for speed reset
 # PWM ports
 # TODO: Dict
 LEFT_PORT = 0
+LIFT_PORT_2 = 3
 RIGHT_PORT = 1
 LIFT_PORT = 5
-ARM_PORT = 3
 
 GAMEPAD_NUM = 0  # This should prolly always be zero
 
@@ -90,7 +90,7 @@ class Robot(wpilib.IterativeRobot):
 
         # Initiate arm and lift
         self.robot_lift = wpilib.PWMTalonSRX(LIFT_PORT)
-        self.robot_arm = wpilib.PWMTalonSRX(ARM_PORT)
+        self.robot_lift_2 = wpilib.PWMTalonSRX(LIFT_PORT_2)
 
         # Initiate button stuff
         self.buttons = set()
@@ -132,7 +132,7 @@ class Robot(wpilib.IterativeRobot):
         self.last_tank = get_millis()
         self.drive.stopMotor()
         self.robot_lift.stopMotor()
-        self.robot_arm.stopMotor()
+        self.robot_lift_2.stopMotor()
         self.current_speed = [0, 0]
 
     # Events
@@ -320,10 +320,10 @@ class Robot(wpilib.IterativeRobot):
                 elif button_name == "ARM OUT":
                     arms = max(-1, min(ARM_SPEED_OUT, 1))
                     self.button_toggles["GRAB"] = False
-        if arms == 0 and self.button_toggles["GRAB"]:
-            self.robot_arm.set(-ARM_SPEED_IN)
-        else:
-            self.robot_arm.set(arms)
+        # if arms == 0 and self.button_toggles["GRAB"]:
+        #     self.robot_lift_2.set(-ARM_SPEED_IN)
+        # else:
+        #     self.robot_lift_2.set(arms)
 
         self.check_rumble()
 
@@ -340,11 +340,13 @@ class Robot(wpilib.IterativeRobot):
         if left_trigger > 0:
             if right_trigger <= 0:
                 self.robot_lift.set(-left_trigger)
+                self.robot_lift_2.set(-left_trigger)
         elif right_trigger > 0:
             self.robot_lift.set(right_trigger)
             # print(right_trigger)
         else:
             self.robot_lift.set(0)
+            self.robot_lift_2.set(0)
 
     def teleopPeriodic(self):
         """Runs repeatedly while robot is in teleop"""
